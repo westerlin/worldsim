@@ -106,20 +106,20 @@ class World:
 class Person:
     
     def __init__(self,epoch=0,father=None,mother=None, world=None):
-        self.yearOfBith = epoch
+        self.yearOfBirth = epoch
         self.gender = random.choice([0,1])
         self.firstname = generateName(self.gender)
         self.cronicle = "===== oooo =====\n" 
-        if (father != None and mother != None):
-            self.lastname = random.choice([father.lastname,mother.lastname])
-            self.log(self.name() + " was born at time "+str(epoch)+".")
-        else:
-            self.lastname = generateName(random.choice([0,1]))
-            self.log(self.name() + " was born at time "+str(epoch)+".")
-            self.log(self.name() + " created "+ pronouns["his"][self.gender] + " own lineage.")
         self.age = 0
         self.sexual_active = False
         self.alive = True
+        if (father != None and mother != None):
+            self.lastname = random.choice([father.lastname,mother.lastname])
+            self.log(self.name() + " was born at time "+str(self.yearOfBirth)+".")
+        else:
+            self.lastname = generateName(random.choice([0,1]))
+            self.log(self.name() + " was born at time "+str(self.yearOfBirth)+".")
+            self.log(self.name() + " created "+ pronouns["his"][self.gender] + " own lineage.")
         self.openess = random.randint(-1,1)
         self.conscientiousness = random.randint(-1,1)
         self.extraversion = random.randint(-1,1)
@@ -139,8 +139,7 @@ class Person:
             world.add(self)
 
     def log(self, paragraph):
-            self.cronicle += "\t (+)" + paragraph + "\n"
-
+            self.cronicle += "\t (+)" + paragraph + " (" + str(self.age) + " epochs)\n"
 
     def profile(self):
         return self.name() + " are characterized by " + getprofiletrait("Openess",self.openess) + ", "  + getprofiletrait("Extraversion",self.extraversion) + ", " + getprofiletrait("Agreeableness",self.agreeableness) + ", " + getprofiletrait("Conscientiousness",self.conscientiousness) + ", "  + getprofiletrait("Neuroticism",self.neuroticism) + "."
@@ -161,14 +160,14 @@ class Person:
             self.log("Became a " + pronouns["adult"][self.gender] + self.atTheAgeOf())
 
     def match(self, prospect):
-        return abs(self.age-prospect.age) < random.randint(1,15) and self.attracted(prospect) and prospect.attracted(self)
+        return abs(self.age-prospect.age) < random.randint(4,15) and self.attracted(prospect) and prospect.attracted(self)
         
     def attracted(self,prospect):
         points = 4
         for desire in self.desires:
             if desire in prospect.traits:
                 points += 1
-        return random.randint(1,6) < points
+        return random.randint(1,5) < points
 
     def fertile(self):
         childrenCount = len(self.offspring) < random.randint(1,10)
@@ -182,7 +181,7 @@ class Person:
 
     def giveBirth(self, partner): 
         if (self.gender == 1 and partner.gender == 0 and self.match(partner) and self.fertile() and partner.fertile()):
-            child = Person(self.context.epoch,partner,self,self.context)
+            child = Person(epoch=self.context.epoch,father=partner,mother=self,world=self.context)
             self.log("Have sexual intercourse with "+partner.name()+" and gives birth to "+child.name())
             self.offspring.append(child)
             partner.log("Have sexual intercourse with "+self.name()+" with whom he has the child "+child.name())
@@ -217,9 +216,9 @@ femalenames = loadNames("female.txt")
 myworld = World()
 
 for a in range(10):
-    Person(world=myworld)
+    Person(epoch=0,world=myworld)
 
-while myworld.epoch < 100:
+while myworld.epoch < 500:
     print(myworld.epoch, len(myworld.population))
     myworld.progress()
 
