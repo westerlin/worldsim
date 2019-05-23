@@ -16,7 +16,7 @@ def generateName(gender):
         return random.choice(femalenames)
 
 pronouns = {
-    "his" : ["his","hers"],
+    "his" : ["his","her"],
     "he" : ["he","she"],
     "him" : ["him","her"],
     "tl" : ["mr.","mrs."],
@@ -65,6 +65,21 @@ OCEAN = {
     }
 }
 
+attractions = { 
+    "traits":["beautiful", "sexy", "wealthy", "powerful", "mysterious", "funny", "gentle", "attentive","fit"]
+} 
+
+
+def getUnique(listObj, noOfItems):
+    output = []
+    noOfItems = min(noOfItems,len(listObj))
+    newlist = listObj[:]
+    idx = 0
+    while idx < noOfItems:
+        output.append(newlist.pop(random.randint(0,len(newlist)-1)))
+        idx+=1
+    return output
+
 def getprofiletrait(dimension,score):
     if score < 0 :
         trait = "low"
@@ -73,20 +88,35 @@ def getprofiletrait(dimension,score):
     return "\n\t\t (+) " + random.choice(OCEAN[dimension][trait])
 
 
+class World:
+    
+    def __init__(self):
+        self.population = []
+        self.epoch = 0
+        
+    def progress(self):
+        for person in self.population:
+            person.evolve()
+        self.epoch += 1
+        
+    def add(self,person):
+        self.population.append(person)
+        person.context = self
+
 class Person:
     
-    def __init__(self,epoch=0,father=None,mother=None):
+    def __init__(self,epoch=0,father=None,mother=None, world=None):
         self.yearOfBith = epoch
         self.gender = random.choice([0,1])
         self.firstname = generateName(self.gender)
         self.cronicle = "===== oooo =====\n" 
         if (father != None and mother != None):
             self.lastname = random.choice([father.lastname,mother.lastname])
-            self.cronicle += "\t (+)" + self.name() + " was born at time "+str(epoch)+".\n"
+            self.log(self.name() + " was born at time "+str(epoch)+".")
         else:
             self.lastname = generateName(random.choice([0,1]))
-            self.cronicle += "\t (+)" + self.name() + " was born at time "+str(epoch)+".\n"
-            self.cronicle += "\t (+)" + self.name() + " created "+ pronouns["his"][self.gender] + " own lineage.\n"
+            self.log(self.name() + " was born at time "+str(epoch)+".")
+            self.log(self.name() + " created "+ pronouns["his"][self.gender] + " own lineage.")
         self.age = 0
         self.sexual_active = False
         self.alive = True
@@ -95,7 +125,21 @@ class Person:
         self.extraversion = random.randint(-1,1)
         self.agreeableness = random.randint(-1,1)
         self.neuroticism = random.randint(-1,1)
-        self.cronicle = "\t (+) " + self.profile() + "\n"
+        self.log(self.profile())
+        self.context = world
+        self.offspring = []
+        self.father = father
+        self.mother = mother
+        self.relationship = {}
+        self.traits = getUnique(attractions["traits"],1)
+        self.desires = getUnique(attractions["traits"],3)
+        #print(self.name() + " is ".join(self.traits) + " and desires ".join(self.desires) )
+        self.log ( ""+self.name() + " is " + str(self.traits) + " and desires "+ str(self.desires) )
+        if world != None:
+            world.add(self)
+
+    def log(self, paragraph):
+            self.cronicle += "\t (+)" + paragraph + "\n"
 
 
     def profile(self):
@@ -112,9 +156,39 @@ class Person:
         
     def evolve_sexuality(self):
         if self.sexual_active : return
-        self.sexual_active = random.randint(12,16) < self.age
+        self.sexual_active = random.randint(12,16) < self.age 
         if self.sexual_active:
-            self.cronicle += "\t (+)Became a " + pronouns["adult"][self.gender] + self.atTheAgeOf() + "\n"
+            self.log("Became a " + pronouns["adult"][self.gender] + self.atTheAgeOf())
+
+    def match(self, prospect):
+        return abs(self.age-prospect.age) < random.randint(1,15) and self.attracted(prospect) and prospect.attracted(self)
+        
+    def attracted(self,prospect):
+        points = 4
+        for desire in self.desires:
+            if desire in prospect.traits:
+                points += 1
+        return random.randint(1,6) < points
+
+    def fertile(self):
+        childrenCount = len(self.offspring) < random.randint(1,10)
+        return self.sexual_active and (self.gender == 0 or self.age < random.randint(43,55)) and childrenCount
+        
+    def displayTrait(self):
+        return 
+        
+    def meet(self, person):
+        pass
+
+    def giveBirth(self, partner): 
+        if (self.gender == 1 and partner.gender == 0 and self.match(partner) and self.fertile() and partner.fertile()):
+            child = Person(self.context.epoch,partner,self,self.context)
+            self.log("Have sexual intercourse with "+partner.name()+" and gives birth to "+child.name())
+            self.offspring.append(child)
+            partner.log("Have sexual intercourse with "+self.name()+" with whom he has the child "+child.name())
+            partner.offspring.append(child)
+            return True 
+        return False
 
     def evolve_ageing(self):
         self.age += 1
@@ -122,21 +196,30 @@ class Person:
             self.die()
 
     def die(self):
-        self.cronicle += "\t (+)" + self.name() +" died of old age" + self.atTheAgeOf() + "\n"
+        self.log(self.name() +" died of old age" + self.atTheAgeOf())
         self.alive = False
+        print(self)
+        self.context.population.remove(self)
     
     def evolve(self):
         if self.alive:
             if (self.sexual_active == False) : self.evolve_sexuality()
+            encounters = getUnique(self.context.population,self.extraversion+1 + self.openess+1)
+            for encounter in encounters:
+                if self.giveBirth(encounter):
+                    break
             self.evolve_ageing()
+            
 
 malenames = loadNames("male.txt")
 femalenames = loadNames("female.txt")
-    
 
-somebody = Person(0)
-while somebody.alive:
-    somebody.evolve()
+myworld = World()
 
-print(somebody)
+for a in range(10):
+    Person(world=myworld)
+
+while myworld.epoch < 100:
+    print(myworld.epoch, len(myworld.population))
+    myworld.progress()
 
